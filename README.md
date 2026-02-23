@@ -1,2 +1,2 @@
 # smart-elevator-controller
-A modular 5-floor elevator control system designed in Verilog HDL using a Moore Finite State Machine (FSM). Features a nearest-request algorithm for optimized travel and a parameterized door-dwell timer.
+Developed a digital elevator controller for 5 floors (0–4) utilizing a Moore Finite State Machine to manage movement, door operations, and idle states. The system optimizes efficiency by implementing a Manhattan distance-based nearest-request algorithm and ensures safety through dedicated timer-controlled door dwell times. Verified through comprehensive behavioral simulation and testbench scenarios.
