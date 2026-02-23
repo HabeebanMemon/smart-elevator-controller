@@ -1,0 +1,90 @@
+//DESIGN_MODULE
+
+`timescale 1ns / 1ps
+
+module elevator_fsm_5floor (
+    input logic clk,
+    input logic reset,
+    input logic [4:0] requests, // requests[0] = floor 0 ... requests[4] = floor 4
+    input logic [2:0] currFloor,
+    input logic at_target,
+    input logic timer_done,
+    output logic door_open,
+    output logic motor_up,
+    output logic motor_down,
+    output logic idle
+);
+
+    // ---------- Sequential encoded states ---------- [cite: 449]
+    typedef enum logic [2:0] {
+        IDLE        = 3'b00,
+        GOING_UP    = 3'b01,
+        GOING_DOWN  = 3'b10,
+        DOOR_OPEN   = 3'b11
+    } state_t;
+
+    state_t cs, ns;
+
+    // ---------- Request calculation ---------- [cite: 450]
+    logic req_exists;
+    logic [2:0] nearest_req;
+    logic [2:0] distance, best_distance;
+
+    always_comb begin
+        req_exists = 0;
+        best_distance = 7;
+        nearest_req = currFloor;
+        for (int i = 0; i < 5; i++) begin
+            if (requests[i]) begin
+                req_exists = 1;
+                // Manhattan distance calculation [cite: 453]
+                distance = (currFloor > i) ? (currFloor - i) : (i - currFloor);
+                if (distance < best_distance) begin
+                    best_distance = distance;
+                    nearest_req = i[2:0];
+                end
+            end
+        end
+    end
+
+    // ---------- Next state logic ---------- [cite: 455]
+    always_comb begin
+        ns = cs;
+        case (cs)
+            IDLE: begin
+                if (reset) ns = IDLE;
+                else if (req_exists) begin
+                    if (nearest_req > currFloor) ns = GOING_UP;
+                    else if (nearest_req < currFloor) ns = GOING_DOWN;
+                    else ns = DOOR_OPEN;
+                end else ns = IDLE;
+            end
+            GOING_UP: begin
+                if (at_target) ns = DOOR_OPEN;
+                else ns = GOING_UP;
+            end
+            GOING_DOWN: begin
+                if (at_target) ns = DOOR_OPEN;
+                else ns = GOING_DOWN;
+            end
+            DOOR_OPEN: begin
+                if (timer_done) ns = IDLE;
+                else ns = DOOR_OPEN;
+            end
+            default: ns = IDLE;
+        endcase
+    end
+
+    // ---------- State register ---------- [cite: 460]
+    always_ff @(posedge clk or posedge reset) begin
+        if (reset) cs <= IDLE;
+        else cs <= ns;
+    end
+
+    // ---------- Output logic (Moore Machine) ---------- [cite: 461, 462, 463]
+    assign door_open  = (cs == DOOR_OPEN);
+    assign motor_up   = (cs == GOING_UP);
+    assign motor_down = (cs == GOING_DOWN);
+    assign idle       = (cs == IDLE || cs == DOOR_OPEN);
+
+endmodule

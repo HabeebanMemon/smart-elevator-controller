@@ -1,0 +1,58 @@
+//TESTBENCH_MODULE
+
+`timescale 1ns / 1ps
+
+module elevator_fsm_5floor_tb;
+
+    logic clk, reset, at_target, timer_done;
+    logic [4:0] requests;
+    logic [2:0] currFloor;
+    logic door_open, motor_up, motor_down, idle;
+
+    // DUT (Device Under Test) [cite: 465]
+    elevator_fsm_5floor dut (.*);
+
+    // Clock Generation [cite: 465]
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+    // Main Simulation Test [cite: 466]
+    initial begin
+        // ---------- Initialize ---------- [cite: 466]
+        reset = 1;
+        requests = 0;
+        currFloor = 0;
+        at_target = 0; 
+        timer_done = 0;
+        #25 reset = 0;
+
+        // ---------- Test 1: IDLE, request floors 1 & 4 ---------- [cite: 468]
+        #20 requests[1] = 1;
+        requests[4] = 1;
+
+        // ---------- Move to floor 1 (Nearest Request) ---------- [cite: 469]
+        #80 currFloor = 1; at_target = 1; #10 at_target = 0;
+        #100 timer_done = 1; #10 timer_done = 0; requests[1] = 0;
+
+        // ---------- Move to floor 4 ---------- [cite: 471, 472]
+        #80 currFloor = 2;
+        #80 currFloor = 3;
+        #80 currFloor = 4; at_target = 1; #10 at_target = 0;
+        #100 timer_done = 1; #10 timer_done = 0; requests[4] = 0;
+
+        // ---------- Request floor 2 (Going DOWN) ---------- [cite: 473, 474]
+        #50 requests[2] = 1;
+        #80 currFloor = 3;
+        #80 currFloor = 2; at_target = 1; #10 at_target = 0;
+        #100 timer_done = 1; #10 timer_done = 0; requests[2] = 0;
+
+        #300;
+        $display("Simulation done!");
+        $finish;
+    end
+
+    // Simulation Monitoring [cite: 476]
+    initial $monitor("[t=%5t] Floor=%0d | Req=%b | State=%s | Door=%b | Up=%b | Down=%b | Idle=%b", 
+                     $time, currFloor, requests, dut.cs.name(), door_open, motor_up, motor_down, idle);
+
+endmodule
